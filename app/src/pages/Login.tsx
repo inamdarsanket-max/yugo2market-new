@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Zap, Loader2, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export default function Login() {
+ login(response.data);
+navigate("/dashboard");
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
