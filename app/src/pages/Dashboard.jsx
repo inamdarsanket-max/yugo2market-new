@@ -1,20 +1,16 @@
 import React from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-function Dashboard() {
+export default function Dashboard() {
   const { user } = useAuth();
-
-  if (!user) {
-    return <div style={{ color: "white" }}>Loading dashboard...</div>;
-  }
 
   return (
     <div style={{ color: "white", padding: "20px" }}>
-      <h1>Welcome {user?.name || "User"}</h1>
-      <p>Email: {user?.email}</p>
-      <p>Role: {user?.role}</p>
+      <h1>Dashboard</h1>
+
+      <pre style={{ background: "#111", padding: "10px" }}>
+        {JSON.stringify(user, null, 2)}
+      </pre>
     </div>
   );
 }
-
-export default Dashboard;
