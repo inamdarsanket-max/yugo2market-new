@@ -1,127 +1,120 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL;
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'user' | 'influencer' | 'admin';
-  avatar?: string;
-  phone?: string;
-  company?: string;
-  isVerified?: boolean;
-  wallet?: {
-    balance: number;
-    currency: string;
-  };
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+const [user, setUser] = useState(null);
+const [token, setToken] = useState(localStorage.getItem("token"));
+const [loading, setLoading] = useState(false);
+
+// 🔹 Setup axios interceptor
+useEffect(() => {
+if (token) {
+axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+} else {
+delete axios.defaults.headers.common["Authorization"];
 }
+}, [token]);
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
-  updateUser: (data: Partial<User>) => void;
+// 🔹 Register
+const register = async (formData) => {
+try {
+setLoading(true);
+
+```
+  const res = await axios.post(`${API}/auth/register`, {
+    fullName: formData.fullName,
+    email: formData.email,
+    password: formData.password,
+    role: formData.role || "brand",
+    phone: formData.phone || "",
+    companyName: formData.companyName || ""
+  });
+
+  const { token, user } = res.data;
+
+  localStorage.setItem("token", token);
+  setToken(token);
+  setUser(user);
+
+  return { success: true };
+} catch (err) {
+  console.error("REGISTER ERROR:", err.response?.data || err.message);
+
+  return {
+    success: false,
+    message:
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      "Registration failed",
+  };
+} finally {
+  setLoading(false);
 }
+```
 
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  role?: 'user' | 'influencer';
-  phone?: string;
-  company?: string;
+};
+
+// 🔹 Login
+const login = async (email, password) => {
+try {
+setLoading(true);
+
+```
+  const res = await axios.post(`${API}/auth/login`, {
+    email,
+    password,
+  });
+
+  const { token, user } = res.data;
+
+  localStorage.setItem("token", token);
+  setToken(token);
+  setUser(user);
+
+  return { success: true };
+} catch (err) {
+  console.error("LOGIN ERROR:", err.response?.data || err.message);
+
+  return {
+    success: false,
+    message:
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      "Login failed",
+  };
+} finally {
+  setLoading(false);
 }
+```
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+};
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+// 🔹 Logout
+const logout = () => {
+localStorage.removeItem("token");
+setToken(null);
+setUser(null);
+};
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchUser(token);
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
+return (
+<AuthContext.Provider
+value={{
+user,
+token,
+loading,
+register,
+login,
+logout,
+}}
+>
+{children}
+</AuthContext.Provider>
+);
+};
 
-  const fetchUser = async (token: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUser(response.data.user);
-    } catch (error) {
-      localStorage.removeItem('token');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/login`, {
-        email,
-        password
-      });
-      
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed');
-    }
-  };
-
-  const register = async (data: RegisterData) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/register`, data);
-      
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-  };
-
-  const updateUser = (data: Partial<User>) => {
-    setUser(prev => prev ? { ...prev, ...data } : null);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        register,
-        logout,
-        updateUser
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+// 🔹 Hook
+export const useAuth = () => useContext(AuthContext);
